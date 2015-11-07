@@ -98,13 +98,9 @@ void PackageHandler(uint8_t * data, uint32_t length)
     }
     case SPEED_TIME:
     {
-        float tempTime = *((float *)(data + 6));
-        if (tempTime > 200)
-        {
-            motor[slot].SetRunTime((float *)(data + 6));
-            motor[slot].SetMode(SPEED_MODE);
-            motor[slot].SetSpeed(*((float *)(data + 2)));
-        }
+        motor[slot].SetRunTime((float *)(data + 6));
+        motor[slot].SetMode(SPEED_MODE);
+        motor[slot].SetSpeed(*((float *)(data + 2)));
         break;
     }
     case GET_SPEED:

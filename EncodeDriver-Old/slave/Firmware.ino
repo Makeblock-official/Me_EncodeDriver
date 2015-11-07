@@ -33,7 +33,6 @@ EncoderMotor motor[2] =
 void setup()
 {
     Serial.begin(115200);
-    // Serial.begin(9600);
     InitI2C();
 
     Timer1.initialize(TIME_STEP * 1000000);

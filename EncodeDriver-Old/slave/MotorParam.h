@@ -14,6 +14,8 @@
 #define     REDUCTION_RATIO     0x007
 #define     MAX_SPEED           0x008
 
+#define     MAGIC_WORD_VALUE    0x65392964
+
 class MotorParam
 {
 public:
@@ -30,6 +32,7 @@ public:
 
 private:
     static uint8_t i2cAddr;
+    static uint32_t magicWord;
 
     //  parameters of motor
     float posP;

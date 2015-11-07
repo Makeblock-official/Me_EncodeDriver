@@ -18,17 +18,20 @@
 // static uint8_t i2cAddr = 0x00;
 
 //  offset of motor param
-#define     OFFSET_POS_P               0x000
-#define     OFFSET_POS_I               0x004
-#define     OFFSET_POS_D               0x008
-#define     OFFSET_SPEED_P             0x00C
-#define     OFFSET_SPEED_I             0x010
-#define     OFFSET_SPEED_D             0x014
-#define     OFFSET_ENCODER_RESOLUTION  0x018
-#define     OFFSET_REDUCTION_RATIO     0x01C
+#define     OFFSET_MAGIC_WORD          0x000
+#define     OFFSET_POS_P               0x004
+#define     OFFSET_POS_I               0x008
+#define     OFFSET_POS_D               0x00C
+#define     OFFSET_SPEED_P             0x010
+#define     OFFSET_SPEED_I             0x014
+#define     OFFSET_SPEED_D             0x018
+#define     OFFSET_ENCODER_RESOLUTION  0x01C
+#define     OFFSET_REDUCTION_RATIO     0x020
 // #define     OFFSET_MAX_SPEED           0x020
 
 uint8_t MotorParam::i2cAddr = 0x09;
+uint32_t MotorParam::magicWord = MAGIC_WORD_VALUE;
+
 
 class EEPROMClass
 {
@@ -49,11 +52,33 @@ void EEPROMClass::write(int address, uint8_t value)
 
 EEPROMClass EEPROM;
 
+//  load data from EEPROM
+//  return: the size loaded, 0 for error.
+static uint32_t EEPROM_Load(uint32_t addr, uint8_t * data, uint32_t size)
+{
+    //  the EEPROM size is 1K (0x000-0x3FF)
+    if (addr + size < 0x400)
+    {
+        for (int i = 0; i < size; ++i)
+        {
+            data[i] = EEPROM.read(addr + i);
+        }
+        return size;
+    }
+    else
+    {
+        return 0;
+    }
+}
+
 MotorParam::MotorParam(uint32_t _baseAddr)
 {
     baseAddr = _baseAddr;
 
-    if (SAVE_PARAM == EEPROM.read(baseAddr/*PARAM_INIT_MODE_ADDR*/))
+	uint32_t magicWordTemp;
+    EEPROM_Load(baseAddr + OFFSET_MAGIC_WORD,(uint8_t *)&magicWordTemp, 4);
+
+    if (MAGIC_WORD_VALUE != magicWordTemp)   /*PARAM_INIT_MODE_ADDR*/
     {
         RestoreFactoryParam();
         // EEPROM.write(PARAM_INIT_MODE_ADDR, LOAD_PARAM);
@@ -81,30 +106,12 @@ static uint32_t EEPROM_Save(uint32_t addr, uint8_t * data, uint32_t size)
     }
 }
 
-//  load data from EEPROM
-//  return: the size loaded, 0 for error.
-static uint32_t EEPROM_Load(uint32_t addr, uint8_t * data, uint32_t size)
-{
-    //  the EEPROM size is 1K (0x000-0x3FF)
-    if (addr + size < 0x400)
-    {
-        for (int i = 0; i < size; ++i)
-        {
-            data[i] = EEPROM.read(addr + i);
-        }
-        return size;
-    }
-    else
-    {
-        return 0;
-    }
-}
-
 //  save all the param to EEPROM
 void MotorParam::Save()
 {
     EEPROM_Save(BASE_ADDR_PARAM_G + OFFSET_I2C_ADDR , (uint8_t *)&i2cAddr          , 1);
 
+    EEPROM_Save(baseAddr + OFFSET_MAGIC_WORD        , (uint8_t *)&magicWord        , 4);
     EEPROM_Save(baseAddr + OFFSET_POS_P             , (uint8_t *)&posP             , 4);
     EEPROM_Save(baseAddr + OFFSET_POS_I             , (uint8_t *)&posI             , 4);
     EEPROM_Save(baseAddr + OFFSET_POS_D             , (uint8_t *)&posD             , 4);
@@ -141,10 +148,10 @@ void MotorParam::RestoreFactoryParam()
     speedP            = 0.5;
     speedI            = 0.2;
     speedD            = 0;
-    encoderResolution = 48;
-    reductionRatio    = 25.76852;   //74.83178;
+    encoderResolution = 32;
+    reductionRatio    = 46.667;   //74.83178;
     // maxSpeed          = 0;
-
+    magicWord         =  MAGIC_WORD_VALUE;
     Save();
 }
 
