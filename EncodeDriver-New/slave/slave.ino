@@ -906,7 +906,7 @@ void initMotor()
   encoder_data[MOTOR_1].mode = I2C_MODE;
   encoder_data[MOTOR_1].motion_state = 0;
   encoder_data[MOTOR_1].tar_pwm = 0;
-  encoder_data[MOTOR_0].cur_pwm = 0;
+  encoder_data[MOTOR_1].cur_pwm = 0;
   encoder_data[MOTOR_1].pulse = 0;
   encoder_data[MOTOR_1].current_speed = 0;
   encoder_data[MOTOR_1].target_speed = 0;
@@ -1139,9 +1139,9 @@ void loop()
   {
     for(int i=0;i<20;i++)
     { 
-      pwm1_read_temp = pwm1_read_temp + analogRead(A0);  //Read PWM values
+      pwm2_read_temp = pwm2_read_temp + analogRead(A0);  //Read PWM values
     }
-    encoder_data[MOTOR_1].tar_pwm = (pwm1_read_temp/20-512)*255/512;
+    encoder_data[MOTOR_1].tar_pwm = (pwm2_read_temp/20-512)*255/512;
   }
 
   //encoder move
