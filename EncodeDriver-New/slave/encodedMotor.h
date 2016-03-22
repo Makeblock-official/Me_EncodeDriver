@@ -137,7 +137,7 @@ boolean dir_lock_flag[2];
 int16_t encoder_output[2];
 float encoder_output_filter;
 long measurement_speed_time;
-long encoder_move_time;
+long encoder_move_time[2];
 long last_pulse_pos_encoder0;
 long last_pulse_pos_encoder1;
 #endif

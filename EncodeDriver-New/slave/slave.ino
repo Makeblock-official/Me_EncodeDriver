@@ -676,10 +676,10 @@ void updateSpeed(void)
 
 void encoder_move(uint8_t slot)
 {
-  if(millis() - encoder_move_time > 40)
+  if(millis() - encoder_move_time[slot] > 40)
   {
     int16_t pwm_encoder = 0;
-    encoder_move_time = millis();
+    encoder_move_time[slot] = millis();
     if((encoder_data[slot].motion_state == MOTION_WITH_POS_LOCK) ||
        (encoder_data[slot].motion_state == MOTION_WITH_POS_RELEASE))
     {
@@ -701,9 +701,9 @@ void set_pwm(uint8_t slot,int pwm)
 
 void pwm_move(uint8_t slot)
 {
-  if(millis() - encoder_move_time > 40)
+  if(millis() - encoder_move_time[slot] > 40)
   {
-    encoder_move_time = millis();
+    encoder_move_time[slot] = millis();
     encoder_data[slot].cur_pwm = 0.9 * encoder_data[slot].cur_pwm + 0.1 * encoder_data[slot].tar_pwm;
   }
 }
@@ -938,7 +938,7 @@ void resetMotor(void)
   delay(10);
   initMotor();
   I2C_init((dev_id) << 1);
-  encoder_move_time = measurement_speed_time = millis();
+  encoder_move_time[MOTOR_0] = encoder_move_time[MOTOR_1] = measurement_speed_time = millis();
 }
 
 void moveTo(uint8_t slot,uint8_t state,long turns,float speed)
@@ -1166,6 +1166,14 @@ void loop()
     pwm_move(MOTOR_1);
     setMotorPwm(MOTOR_1,encoder_data[MOTOR_1].cur_pwm);
   }
+//  Serial.print("cur0:");
+//  Serial.print(encoder_data[MOTOR_0].cur_pwm);
+//  Serial.print(" ,cur1:");
+//  Serial.print(encoder_data[MOTOR_1].cur_pwm);
+//  Serial.print(" ,tar0:");
+//  Serial.print(encoder_data[MOTOR_0].tar_pwm);
+//  Serial.print(" ,tar1:");
+//  Serial.println(encoder_data[MOTOR_1].tar_pwm);
 }
 
 
