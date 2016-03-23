@@ -214,6 +214,9 @@ void ParseI2cCmd(char * c)
     case CMD_SET_RATIO:
       setRatio(slot,val.floatVal[0]);
       break;
+    case CMD_SET_CUR_POS:
+      setCurPos(slot,val.longVal[0]);
+      break;
     case CMD_SET_PULSE:
       setPulse(slot,val.intVal[0]);
       break;
@@ -254,6 +257,9 @@ void ParseI2cCmd(char * c)
     case CMD_GET_POS:
       memcpy(&bufI2C[0],&encoder_data[slot].pulse,4);
       break;
+    case CMD_GET_LOCK_STATE:
+      memcpy(&bufI2C[0],&lock_flag[slot],2);
+      break;
     case CMD_GET_RATIO:
       if(slot == MOTOR_1)
       {
@@ -261,17 +267,17 @@ void ParseI2cCmd(char * c)
       }
       else
       {
-        memcpy(&bufI2C[0],&encoder_eeprom.ratio0,4);
+        memcpy(&bufI2C[0],&encoder_eeprom.ratio0,4); 
       } 
       break;
     case CMD_GET_PULSE:
       if(slot == MOTOR_1)
       {
-        memcpy(&bufI2C[0],&encoder_eeprom.pulse1,4);
+        memcpy(&bufI2C[0],&encoder_eeprom.pulse1,2);
       }
       else
       {
-        memcpy(&bufI2C[0],&encoder_eeprom.pulse0,4);
+        memcpy(&bufI2C[0],&encoder_eeprom.pulse0,2);
       } 
       break;
   }
@@ -704,7 +710,16 @@ void pwm_move(uint8_t slot)
   if(millis() - encoder_move_time[slot] > 40)
   {
     encoder_move_time[slot] = millis();
-    encoder_data[slot].cur_pwm = 0.9 * encoder_data[slot].cur_pwm + 0.1 * encoder_data[slot].tar_pwm;
+    encoder_data[slot].cur_pwm = 0.8 * encoder_data[slot].cur_pwm + 0.2 * encoder_data[slot].tar_pwm;
+    if((abs(encoder_data[slot].cur_pwm) <= 20) && (encoder_data[slot].tar_pwm == 0))
+    {
+      lock_flag[slot] == true;
+      encoder_data[slot].cur_pwm = 0;
+    }
+    else
+    {
+      lock_flag[slot] = false;
+    }
   }
 }
 
@@ -730,6 +745,7 @@ int16_t pid_position_to_pwm(uint8_t slot)
   float out_put_offset = 0;
 
   pos_error = encoder_distance_togo(slot);
+
   if((lock_flag[slot] == false) && (dir_lock_flag[slot] == true) && (pos_error < 0))
   {
     d_component = encoder_data[slot].current_speed;
@@ -787,6 +803,7 @@ int16_t pid_position_to_pwm(uint8_t slot)
     }
     else
     {
+      lock_flag[slot] = true;
       if(encoder_data[slot].motion_state == MOTION_WITH_POS_LOCK)
       {
         d_component = encoder_data[slot].current_speed;
@@ -844,6 +861,7 @@ int16_t speed_without_pos(uint8_t slot)
   else if((lock_flag[slot] == true) && (encoder_data[slot].motion_state == MOTION_WITHOUT_POS_RELEASE))
   {
     encoder_data[slot].PID_speed.Output = 0;
+    lock_flag[slot] = true;
   }
 
   if((lock_flag[slot] == false) && (encoder_data[slot].target_speed == 0) && (abs(out_put_offset) < 15))
@@ -1070,6 +1088,11 @@ void setDevid(uint8_t devid)
 {
   encoder_eeprom.devid = devid;
   ByteToEEPROM(STORE_DEVID_ADDR,1,&devid);
+}
+
+void setCurPos(uint8_t slot, long pos)
+{
+  encoder_data[slot].pulse = pos;
 }
 
 void pwm_frequency_init(void)

@@ -11,6 +11,7 @@
 // config function
 #define CMD_SET_SPEED_PID 0x10
 #define CMD_SET_POS_PID   0x11
+#define CMD_SET_CUR_POS   0x12
 #define CMD_SET_MODE      0x13
 #define CMD_SET_PWM       0x14
 #define CMD_SET_RATIO     0x15
@@ -24,6 +25,7 @@
 #define CMD_GET_SPEED           0x24
 #define CMD_GET_RATIO           0x25
 #define CMD_GET_PULSE           0x26
+#define CMD_GET_LOCK_STATE      0x27
 
 //Motor parameter settings
 #define MAX_ENCODER_SPEED    220
@@ -46,7 +48,7 @@
 #define PWM_I2C_PWM       0x02
 
 #define PWM_MIN_OFFSET                 25
-#define ENCODER_POS_DEADBAND           15
+#define ENCODER_POS_DEADBAND           10
 #define DECELERATION_DISTANCE_PITCH    6 
 
 
