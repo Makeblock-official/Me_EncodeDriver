@@ -19,24 +19,22 @@
 
 //GPIO configuration
 #define INT_1_PIN     3
-#define DIR_1_PIN     10
+#define DIR_1_PIN     A2
 #define MOTOR_1_PWM   6
-#define MOTOR_1_H1    A0
-#define MOTOR_1_H2    A1
+#define MOTOR_1_H1    7
 
 #define INT_2_PIN     2
-#define DIR_2_PIN     12
+#define DIR_2_PIN     A3
 #define MOTOR_2_PWM   5
-#define MOTOR_2_H1    A2
-#define MOTOR_2_H2    A3
+#define MOTOR_2_H1    8
 
 //Interrupt Configuration
 #define MOTOR_1_IRQ         INT1_vect  
 #define MOTOR_2_IRQ         INT0_vect
-#define MOTOR_1_PIN         PINB
-#define MOTOR_1_DIR         PINB2 
-#define MOTOR_2_PIN         PINB
-#define MOTOR_2_DIR         PINB4
+#define MOTOR_1_PIN         PINC
+#define MOTOR_1_DIR         PINC2 
+#define MOTOR_2_PIN         PINC
+#define MOTOR_2_DIR         PINC3
 
 /****************************************************************************************************
  * I2C slave code
@@ -460,8 +458,8 @@ void setDefaultvalue(void)
   encoder_eeprom.pos0_p = 1.8;
   encoder_eeprom.pos0_i = 0.0;
   encoder_eeprom.pos0_d = 1.2;
-  encoder_eeprom.ratio0 = 46.67;
-  encoder_eeprom.pulse0 = 8;
+  encoder_eeprom.ratio0 = 26.9;
+  encoder_eeprom.pulse0 = 7;
 
   encoder_eeprom.mid_data = EEPROM_PID_MID;
   
@@ -471,8 +469,8 @@ void setDefaultvalue(void)
   encoder_eeprom.pos1_p = 1.8;
   encoder_eeprom.pos1_i = 0.0;
   encoder_eeprom.pos1_d = 1.2;
-  encoder_eeprom.ratio1 = 46.67;
-  encoder_eeprom.pulse1 = 8;
+  encoder_eeprom.ratio1 = 26.9;
+  encoder_eeprom.pulse1 = 7;
   encoder_eeprom.end_data = EEPROM_PID_END;
 }
 
@@ -596,11 +594,11 @@ ISR(MOTOR_1_IRQ)
 {
   if(MOTOR_1_PIN & (1 << MOTOR_1_DIR))
   {
-    encoder_data[MOTOR_0].pulse--;
+    encoder_data[MOTOR_0].pulse++;
   }
   else
   {
-    encoder_data[MOTOR_0].pulse++;
+    encoder_data[MOTOR_0].pulse--;
   }
 }
 
@@ -608,11 +606,11 @@ ISR(MOTOR_2_IRQ)
 {
   if(MOTOR_2_PIN & (1 << MOTOR_2_DIR))
   {
-    encoder_data[MOTOR_1].pulse--;
+    encoder_data[MOTOR_1].pulse++;
   }
   else
   {
-    encoder_data[MOTOR_1].pulse++;
+    encoder_data[MOTOR_1].pulse--;
   }
 }
 
@@ -639,14 +637,12 @@ void setMotor1Pwm(int16_t pwm)
   pwm = constrain(pwm,-250,250);
   if(pwm < 0)
   {
-    digitalWrite(MOTOR_1_H1, LOW);
-    digitalWrite(MOTOR_1_H2, HIGH);
+    digitalWrite(MOTOR_1_H1, HIGH);
     analogWrite(MOTOR_1_PWM, abs(pwm));  
   }
   else
   {
-    digitalWrite(MOTOR_1_H1, HIGH);
-    digitalWrite(MOTOR_1_H2, LOW);
+    digitalWrite(MOTOR_1_H1, LOW);
     analogWrite(MOTOR_1_PWM, abs(pwm));
   }
 }
@@ -656,14 +652,12 @@ void setMotor2Pwm(int16_t pwm)
   pwm = constrain(pwm,-250,250);
   if(pwm < 0)
   {
-    digitalWrite(MOTOR_2_H1, LOW);
-    digitalWrite(MOTOR_2_H2, HIGH);
+    digitalWrite(MOTOR_2_H1, HIGH);
     analogWrite(MOTOR_2_PWM, abs(pwm));
   }
   else
   {
-    digitalWrite(MOTOR_2_H1, HIGH);
-    digitalWrite(MOTOR_2_H2, LOW);
+    digitalWrite(MOTOR_2_H1, LOW);
     analogWrite(MOTOR_2_PWM, abs(pwm));
   }
 }
@@ -1122,8 +1116,6 @@ void setup() {
   pinMode(DIR_2_PIN, INPUT_PULLUP);
   pinMode(MOTOR_1_H1,OUTPUT);
   pinMode(MOTOR_2_H1,OUTPUT);
-  pinMode(MOTOR_1_H2,OUTPUT);
-  pinMode(MOTOR_2_H2,OUTPUT);
 
   EICRA = (1 << ISC11) | (1 << ISC01);
   EIMSK = (1 << INT0) | (1 << INT1);
