@@ -328,6 +328,15 @@ void parse_i2c_cmd(char * c)
 #ifdef DEBUG_INFO
   Serial.print("cmd:");
   Serial.print(cmd);
+
+  Serial.print("  ,slot:");
+  Serial.print(slot);
+  Serial.print("  ,flag:");
+  Serial.print((uint8_t)val.floatVal[0]);
+  Serial.print("  ,pos:");
+  Serial.print(val.longVal[1]);
+  Serial.print("  speed:");
+  Serial.println(val.floatVal[2]);
 #endif
   switch(cmd){
     // move state and function
@@ -335,16 +344,6 @@ void parse_i2c_cmd(char * c)
       motor_reset();
       break;
     case CMD_MOVE_TO:
-#ifdef DEBUG_INFO
-      Serial.print("  ,slot:");
-      Serial.print(slot);
-      Serial.print("  ,flag:");
-      Serial.print((uint8_t)val.floatVal[0]);
-      Serial.print("  ,pos:");
-      Serial.print(val.longVal[1]);
-      Serial.print("  speed:");
-      Serial.println(val.floatVal[2]);
-#endif
       set_position_to(slot,(uint8_t)val.floatVal[0],val.longVal[1],val.floatVal[2]);
       break;
     case CMD_MOVE:
@@ -701,6 +700,7 @@ void set_pulse(uint8_t slot, uint16_t pulse)
 
 void set_curpositon(uint8_t slot, long pos)
 {
+  encoder_data[slot].pulse = (long)(pos * (encoder_data[slot].encoder_pulse * encoder_data[slot].ratio) / 360);//payton add
   encoder_data[slot].current_pos = pos;
 }
 
@@ -803,7 +803,7 @@ void motor_reset(void)
   eeprom_read();
   delay(10);
   motor_init();
-  i2c_init((devic_id) << 1);
+  //i2c_init((devic_id) << 1);//payton modify
 }
 
 void motor_check_power(void)
