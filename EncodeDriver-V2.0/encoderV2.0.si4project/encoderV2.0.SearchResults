@@ -1,0 +1,4 @@
+---- CMD_SET_PWM Matches (2 in 2 files) ----
+
+encodedMotor.h (slave) line 35 : #define CMD_SET_PWM       0x14
+parse_i2c_cmd in slave.ino (slave) :     case CMD_SET_PWM:

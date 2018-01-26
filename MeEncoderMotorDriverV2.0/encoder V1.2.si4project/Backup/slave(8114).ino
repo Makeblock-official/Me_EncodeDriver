@@ -7,39 +7,42 @@
 
 
 //Print message priority
-//#define DEBUG_INFO_ERROR
-//#define DEBUG_INFO_HIGH  
-//#define DEBUG_INFO_MID
-//#define DEBUG_INFO_LOW
-//#define DEBUG_INFO
+// #define DEBUG_INFO_ERROR
+// #define DEBUG_INFO_HIGH
+// #define DEBUG_INFO_MID
+// #define DEBUG_INFO_LOW
+// #define DEBUG_INFO
 
 //Common parameter configuration
 #define DEFALUT_I2C_ADDR    0x09
 #define PULSE_PER_C         8
 #define MOTOR_BOTH          2
 
-//GPIO configuration
-#define INT_1_PIN     3
-#define DIR_1_PIN     A2
-#define MOTOR_1_PWM   6
-#define MOTOR_1_H1    7
+#define INT_1_PIN     2
+#define DIR_1_PIN     7
+#define MOTOR_1_PWM_A 9
+#define MOTOR_1_PWM_B 10
 
-#define INT_2_PIN     2
-#define DIR_2_PIN     A3
-#define MOTOR_2_PWM   5
-#define MOTOR_2_H1    8
+#define INT_2_PIN     3
+#define DIR_2_PIN     8
+#define MOTOR_2_PWM_A 6
+#define MOTOR_2_PWM_B 5
 
 #define SET_I2C_ADDR_PIN  A7
-#define PWR_ON_PIN        4
 #define WORK_LED_PIN      13
 
+#define MOTOR_DRV_ERR_FB_PIN  A0
+#define MOTOR_DRV_SHUTDOWN_CTRL_PIN A2
+#define MOTOR_DRV_STBYB_PIN   A1
+
 //Interrupt Configuration
-#define MOTOR_1_IRQ         INT1_vect  
-#define MOTOR_2_IRQ         INT0_vect
-#define MOTOR_1_PIN         PINC
-#define MOTOR_1_DIR         PINC2 
-#define MOTOR_2_PIN         PINC
-#define MOTOR_2_DIR         PINC3
+#define MOTOR_1_IRQ         INT0_vect
+#define MOTOR_2_IRQ         INT1_vect
+#define MOTOR_2_PIN         PINB
+#define MOTOR_2_DIR         PINB0
+#define MOTOR_1_PIN         PIND
+#define MOTOR_1_DIR         PIND7
+
 
 /****************************************************************************************************
  * I2C slave code
@@ -66,6 +69,42 @@ static encoder_data_type encoder_data[2];
 static encoder_eeprom_type encoder_eeprom;
 const uint8_t pwm_input_pin[2] = {A1,A0};
 
+void MotorDrvErrPcs(void)
+{
+  static uint8_t error_flag = 0;
+
+  if(digitalRead(MOTOR_DRV_ERR_FB_PIN) == LOW)
+  {
+    error_flag = 1;
+    //Serial.print("Sys error...");
+  }
+  else
+  {
+    //Serial.print("  Sys ok ...");
+  }
+
+  if(error_flag == 1)
+  {
+    static uint8_t count = 0;
+    count++;
+    if(count == 1)
+    {
+      digitalWrite(WORK_LED_PIN, HIGH);
+    }
+    else if(count == 10)
+    {
+      digitalWrite(WORK_LED_PIN, LOW);
+    }
+    else if(count > 40)
+    {
+      count = 0;;
+    }
+  }
+  else
+  {
+    digitalWrite(WORK_LED_PIN, HIGH);
+  }
+}
 
 void eeprom_default_value(void)
 {
@@ -78,19 +117,19 @@ void eeprom_default_value(void)
   encoder_eeprom.pos0_p = 1.0;
   encoder_eeprom.pos0_i = 0;
   encoder_eeprom.pos0_d = 1.2;
-  encoder_eeprom.ratio0 = 26.9;
-  encoder_eeprom.pulse0 = 7;
+  encoder_eeprom.ratio0 = 39.43;
+  encoder_eeprom.pulse0 = 9;
 
   encoder_eeprom.mid_data = EEPROM_PID_MID;
-  
+
   encoder_eeprom.speed1_p = 0.8;
   encoder_eeprom.speed1_i = 0.25;
   encoder_eeprom.speed1_d = 0.0;
   encoder_eeprom.pos1_p = 1.0;
   encoder_eeprom.pos1_i = 0;
   encoder_eeprom.pos1_d = 1.2;
-  encoder_eeprom.ratio1 = 26.9;
-  encoder_eeprom.pulse1 = 7;
+  encoder_eeprom.ratio1 = 39.43;
+  encoder_eeprom.pulse1 = 9;
   encoder_eeprom.end_data = EEPROM_PID_END;
 }
 
@@ -700,6 +739,7 @@ void set_pulse(uint8_t slot, uint16_t pulse)
 
 void set_curpositon(uint8_t slot, long pos)
 {
+  encoder_data[slot].mode = MOTION_IDLE_MODE;
   encoder_data[slot].pulse = (long)(pos * (encoder_data[slot].encoder_pulse * encoder_data[slot].ratio) / 360);//payton add
   encoder_data[slot].current_pos = pos;
 }
@@ -710,28 +750,62 @@ void set_devicid(uint8_t devid)
   eeprom_set_byte(STORE_DEVID_ADDR,1,&devid);
 }
 
+/**********************
+0x0000 -> 1023  VCC
+0x0100 -> 816
+0x0010 -> 678
+0x0110 -> 580
+0x0001 -> 512
+0x0101 -> 454
+0x0011 -> 408
+0x0111 -> 370
+**********************/
 uint8_t get_devceid(void)
 {
   int val = analogRead(SET_I2C_ADDR_PIN);
+  uint8_t address = DEFALUT_I2C_ADDR;
 
-  if( val > 851)
-      return DEFALUT_I2C_ADDR+0x00;
-  else if(val > 594)
-      return DEFALUT_I2C_ADDR+0x01;
-  else if(val > 457)
-      return DEFALUT_I2C_ADDR+0x02;
-  else if(val > 375)
-      return DEFALUT_I2C_ADDR+0x03;
-  else if(val > 319)
-      return DEFALUT_I2C_ADDR+0x04;
-  else if(val > 275)
-      return DEFALUT_I2C_ADDR+0x05;
-  else if(val > 241)
-      return DEFALUT_I2C_ADDR+0x06;
-  else if(val > 114)
-      return DEFALUT_I2C_ADDR+0x07;
-  else
-      return DEFALUT_I2C_ADDR;
+#ifdef DEBUG_INFO
+  Serial.print("voltage of Addr_Set: ");
+  Serial.println((val));
+#endif
+
+  if( val > 919)
+  {
+    address = DEFALUT_I2C_ADDR+0x00;
+  }
+  else if(val > 747)
+  {
+    address = DEFALUT_I2C_ADDR+0x04;
+  }
+  else if(val > 629)
+  {
+    address = DEFALUT_I2C_ADDR+0x02;
+  }
+  else if(val > 546)
+  {
+    address = DEFALUT_I2C_ADDR+0x06;
+  }
+  else if(val > 483)
+  {
+    address = DEFALUT_I2C_ADDR+0x01;
+  }
+  else if(val > 431)
+  {
+    address = DEFALUT_I2C_ADDR+0x05;
+  }
+  else if(val > 389)
+  {
+    address = DEFALUT_I2C_ADDR+0x03;
+  }
+  else if(val > 0)
+  {
+    address = DEFALUT_I2C_ADDR+0x07;
+  }
+
+  Serial.print("IIC address: ");
+  Serial.println(address);
+  return address;
 }
 
 /****************************************************************************************************
@@ -787,7 +861,7 @@ void motor_reset(void)
 {
   motor_set_pwm(MOTOR_0,0);
   motor_set_pwm(MOTOR_1,0);
-  delay(10);  
+  delay(10);
   eeprom_read();
   delay(10);
   motor_init();
@@ -795,67 +869,52 @@ void motor_reset(void)
   //i2c_init((get_devceid()) << 1);
 }
 
-void motor_check_power(void)
-{
-  static unsigned long t0 = millis();
-
-  while(digitalRead(PWR_ON_PIN) > 0) 
-  {
-    if((millis() - t0) > 200) 
-    {
-      digitalWrite(WORK_LED_PIN, !digitalRead(WORK_LED_PIN));
-      t0 = millis();
-    }
-  }
-  digitalWrite(WORK_LED_PIN, LOW);
-}
-
 void motor_set_pwm(uint8_t slot, int16_t set_pwm)
 {
   //encoder_data[slot].cur_pwm = encoder_data[slot].cur_pwm * 0.0 + set_pwm  * 1.0;
   if(set_pwm > encoder_data[slot].cur_pwm+30)
-    encoder_data[slot].cur_pwm += 30; 
+    encoder_data[slot].cur_pwm += 30;
   else if(set_pwm < encoder_data[slot].cur_pwm-30)
     encoder_data[slot].cur_pwm -= 30;
   else
     encoder_data[slot].cur_pwm = set_pwm;
 
   int16_t pwm = encoder_data[slot].cur_pwm;
-  
+
   if(slot == MOTOR_1)
   {
-    pwm = constrain(pwm,-245,250);
+    pwm = constrain(pwm,-250,250);
     if(pwm < 0)
     {
-      digitalWrite(MOTOR_2_H1, HIGH);
-      analogWrite(MOTOR_2_PWM, abs(pwm));
+      analogWrite(MOTOR_2_PWM_A, 0);
+      analogWrite(MOTOR_2_PWM_B, abs(pwm));
     }
     else
     {
-      digitalWrite(MOTOR_2_H1, LOW);
-      analogWrite(MOTOR_2_PWM, abs(pwm));
+      analogWrite(MOTOR_2_PWM_B, 0);
+      analogWrite(MOTOR_2_PWM_A, abs(pwm));
     }
   }
-  else
+  else // slot == MOTOR_2
   {
     pwm = constrain(pwm,-245,250);
     if(pwm < 0)
     {
-      digitalWrite(MOTOR_1_H1, HIGH);
-      analogWrite(MOTOR_1_PWM, abs(pwm));  
+      analogWrite(MOTOR_1_PWM_B, 0);
+      analogWrite(MOTOR_1_PWM_A, abs(pwm));
     }
     else
     {
-      digitalWrite(MOTOR_1_H1, LOW);
-      analogWrite(MOTOR_1_PWM, abs(pwm));
+      analogWrite(MOTOR_1_PWM_A, 0);
+      analogWrite(MOTOR_1_PWM_B, abs(pwm));
     }
   }
 }
 
 void motor_idle_mode(uint8_t slot)
 {
-    encoder_output[slot] = 0;
-    motor_set_pwm(slot,encoder_output[slot]);
+  encoder_output[slot] = 0;
+  motor_set_pwm(slot,encoder_output[slot]);
 }
 
 void motor_pwm_mode(uint8_t slot)
@@ -1132,16 +1191,26 @@ void setup() {
   pinMode(DIR_1_PIN, INPUT_PULLUP);
   pinMode(INT_2_PIN, INPUT_PULLUP);
   pinMode(DIR_2_PIN, INPUT_PULLUP);
-  pinMode(MOTOR_1_H1,OUTPUT);
-  pinMode(MOTOR_2_H1,OUTPUT);
 
-  pinMode(PWR_ON_PIN, INPUT_PULLUP);
   pinMode(WORK_LED_PIN, OUTPUT);
+  digitalWrite(WORK_LED_PIN, HIGH);
 
-  EICRA = (1 << ISC11) | (1 << ISC01);
+  // Drive pinMode configure
+  pinMode(MOTOR_1_PWM_A, OUTPUT);
+  pinMode(MOTOR_1_PWM_B, OUTPUT);
+  pinMode(MOTOR_2_PWM_A, OUTPUT);
+  pinMode(MOTOR_2_PWM_B, OUTPUT);
+
+  // Drive Control pinMode configure
+  pinMode(MOTOR_DRV_ERR_FB_PIN,INPUT_PULLUP);
+  pinMode(MOTOR_DRV_SHUTDOWN_CTRL_PIN,OUTPUT);
+  digitalWrite(MOTOR_DRV_SHUTDOWN_CTRL_PIN, HIGH);
+  pinMode(MOTOR_DRV_STBYB_PIN,INPUT);  // do not use INPUT_PULLUP mode !!!
+
+  EICRA = 0x00 | (1 << ISC11) | (1 << ISC01);  //interrupt 1 & interrupt 0 set falling edge trig
   EIMSK = (1 << INT0) | (1 << INT1);
 
-  delay(10);  
+  delay(10);
   eeprom_read();
   delay(10);
   motor_init();
@@ -1149,11 +1218,8 @@ void setup() {
   i2c_init((get_devceid()) << 1);
 }
 
-void loop() 
+void loop()
 {
-  
-  motor_check_power();
-
   //G code processing
   while(Serial.available() > 0)
   {
@@ -1170,7 +1236,7 @@ void loop()
       uart_index = 0;
     }
   }
-  
+
   update_position();
   update_speed();
 
@@ -1179,8 +1245,9 @@ void loop()
     motor_ctrl_time = millis();
     motor_process(MOTOR_0);
     motor_process(MOTOR_1);
+
+    MotorDrvErrPcs();
   }
-  
 }
 
 
